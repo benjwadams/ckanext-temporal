@@ -3,6 +3,52 @@ import datetime
 import ckan.plugins as p
 
 class TemporalPlugin(p.SingletonPlugin):
+    def before_index(self, data_dict):
+        data_modified = copy.deepcopy(data_dict)
+        start_end_time = []
+        responsible_party = data_dict.get('extras_responsible-party')
+        if responsible_party is not None:
+            originators = get_originator_names(responsible_party)
+            if len(originators) > 0:
+                data_modified['data_provider'] = originators
+
+        # write GCMD Keywords and CF Standard Names to corresponding solr
+        # multi-index fields
+        for field_name in ('cf_standard_names', 'gcmd_keywords'):
+            extras_str = data_dict.get("extras_{}".format(field_name))
+            if extras_str is not None:
+                try:
+                    extras_parse = [e.strip() for e in
+                                    json.loads(extras_str)]
+                except ValueError:
+                    log.exception("Can't parse {} from JSON".format(field_name))
+                else:
+                    data_modified[field_name] = extras_parse
+
+
+        # Solr StringField max length is 32766 bytes.  Truncate to this length
+        # if any field exceeds this length so that harvesting doesn't crash
+        max_solr_strlen_bytes = 32766
+        for extra_key, extra_val in data_modified.items():
+            if (extra_key not in {'data_dict', 'validated_data_dict'} and
+                isinstance(extra_val, six.string_types)):
+                bytes_str = extra_val.encode("utf-8")
+                bytes_len = len(bytes_str)
+                # TODO: if json, ignore
+                if bytes_len > max_solr_strlen_bytes:
+                    log.info("Key {} length of {} bytes exceeds maximum of {}, "
+                             "truncating string".format(extra_key,
+                                                        max_solr_strlen_bytes,
+                                                        bytes_len))
+                    trunc_val = bytes_str[:max_solr_strlen_bytes].decode('utf-8',
+                                                                         'ignore')
+                    data_modified[extra_key] = trunc_val
+
+        log.debug(data_modified.get('temporal_extent'))
+        return data_modified
+
+    # IFacets
+
     def before_search(self, search_params):
         # handle temporal filters
         if 'extras' in search_params:
@@ -102,3 +148,25 @@ def convert_date(date_val, check_datetime=False, date_to_datetime=False):
         else:
             # probably won't reach here, but not a bad idea to be defensive anyhow
             raise ValueError("Type {} is not handled by the datetime conversion routine")
+
+    def get_package_dict(self, context, data_dict):
+
+        package_dict = data_dict['package_dict']
+        iso_values = data_dict['iso_values']
+
+        returned_tags =  split_gcmd_tags(iso_values['tags'])
+        if returned_tags is not None:
+            package_dict['tags'] = returned_tags
+
+        # ckanext-dcat uses temporal_start and temporal_end for time extents
+        # instead of temporal-extent-begin and temporal-extent-end as used by
+        # CKAN
+        time_pairs = (('temporal_start', 'temporal-extent-begin'),
+                      ('temporal_end', 'temporal-extent-end'))
+        for new_key, iso_time_field in time_pairs:
+            # recreating ckanext-spatial's logic here
+            if len(iso_values.get(iso_time_field, [])) > 0:
+                package_dict['extras'].append(
+                    {'key': new_key, 'value': iso_values[iso_time_field][0]})
+
+        return package_dict
