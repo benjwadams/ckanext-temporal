@@ -5,9 +5,9 @@ import ckan.plugins.toolkit as toolkit
 
 
 class TemporalPlugin(p.SingletonPlugin):
-    p.implements(plugins.IConfigurer)
-    p.implements(plugins.IFacets)
-    p.implements(plugins.IConfigurer)
+    p.implements(p.IConfigurer)
+    p.implements(p.IFacets)
+    p.implements(p.IConfigurer)
 
     def before_index(self, data_dict):
         data_modified = copy.deepcopy(data_dict)
