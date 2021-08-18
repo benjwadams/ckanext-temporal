@@ -112,6 +112,11 @@ class TemporalPlugin(p.SingletonPlugin):
             log.info(search_params_modified)
             return search_params_modified
 
+    # time and depth aren't standard facets, so just return the regular
+    # facets dict
+    def dataset_facets(self, facets_dict, package_type):
+        return facets_dict
+
 
     def update_config(self, config_):
         toolkit.add_template_directory(config_, "templates")
