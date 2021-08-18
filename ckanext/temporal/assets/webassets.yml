@@ -1,0 +1,14 @@
+# temporal-js:
+#   filter: rjsmin
+#   output: ckanext-temporal/%(version)s-temporal.js
+#   contents:
+#     - js/temporal.js
+#   extra:
+#     preload:
+#       - base/main
+
+# temporal-css:
+#   filter: cssrewrite
+#   output: ckanext-temporal/%(version)s-temporal.css
+#   contents:
+#     - css/temporal.css

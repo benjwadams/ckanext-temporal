@@ -1,8 +1,14 @@
 import pendulum
 import datetime
 import ckan.plugins as p
+import ckan.plugins.toolkit as toolkit
+
 
 class TemporalPlugin(p.SingletonPlugin):
+    p.implements(plugins.IConfigurer)
+    p.implements(plugins.IFacets)
+    p.implements(plugins.IConfigurer)
+
     def before_index(self, data_dict):
         data_modified = copy.deepcopy(data_dict)
         start_end_time = []
@@ -47,7 +53,6 @@ class TemporalPlugin(p.SingletonPlugin):
         log.debug(data_modified.get('temporal_extent'))
         return data_modified
 
-    # IFacets
 
     def before_search(self, search_params):
         # handle temporal filters
@@ -106,6 +111,12 @@ class TemporalPlugin(p.SingletonPlugin):
             search_params_modified['fq'] = fq_modified
             log.info(search_params_modified)
             return search_params_modified
+
+
+    def update_config(self, config_):
+        toolkit.add_template_directory(config_, "templates")
+        toolkit.add_public_directory(config_, "public")
+        toolkit.add_resource("assets", "temporal")
 
 def convert_date(date_val, check_datetime=False, date_to_datetime=False):
     """Given a * date or datetime string.  Optionally checks the type parsed
