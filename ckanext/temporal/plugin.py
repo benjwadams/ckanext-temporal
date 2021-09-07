@@ -117,6 +117,8 @@ class TemporalPlugin(p.SingletonPlugin):
     def dataset_facets(self, facets_dict, package_type):
         return facets_dict
 
+    def group_facets(self, facets_dict, group_type, package_type):
+        return facets_dict
 
     def update_config(self, config_):
         toolkit.add_template_directory(config_, "templates")
